@@ -3,6 +3,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Settings from './pages/Settings';
+import TransactionHistory from './pages/TransactionHistory';
 
 function ProtectedRoute({ children }) {
   const token = localStorage.getItem('token');
@@ -39,6 +40,14 @@ function App() {
                 <Settings />
               </ProtectedRoute>
             } 
+          />
+          <Route
+            path="/history"
+            element={
+              <ProtectedRoute>
+                <TransactionHistory />
+              </ProtectedRoute>
+            }
           />
         </Routes>
       </div>

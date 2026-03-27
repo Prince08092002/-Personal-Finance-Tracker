@@ -69,7 +69,7 @@ export default function Login() {
 
   return (
     <div className="auth-card">
-      <div class="auth-header">
+      <div className="auth-header">
         <h2 className="auth-title">
           {showRestorePrompt ? 'Account Deactivated' : 'Welcome Back'}
         </h2>
