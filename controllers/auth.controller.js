@@ -80,7 +80,7 @@ const login = async (req, res, next) => {
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) return res.status(401).json({ success: false, message: 'Invalid credentials' });
 
-        const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: '1d' });
+        const token = jwt.sign({ userId: user.id, name: user.name }, process.env.JWT_SECRET, { expiresIn: '1d' });
 
         res.json({
             success: true,
@@ -140,7 +140,7 @@ const restoreDirect = async (req, res, next) => {
         await User.restoreAccount(user.id);
 
         // Generate Login Token
-        const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: '1d' });
+        const token = jwt.sign({ userId: user.id, name: user.name }, process.env.JWT_SECRET, { expiresIn: '1d' });
 
         res.json({
             success: true,
@@ -182,7 +182,7 @@ const overwriteAccount = async (req, res, next) => {
             phone_number: cleanPhone
         });
 
-        const token = jwt.sign({ userId: newUserId }, process.env.JWT_SECRET, { expiresIn: '1d' });
+        const token = jwt.sign({ userId: newUserId, name }, process.env.JWT_SECRET, { expiresIn: '1d' });
 
         res.status(201).json({
             success: true,
