@@ -20,9 +20,24 @@ app.use(cors());
 // Middleware to parse JSON bodies
 app.use(express.json());
 
-// Request Logger
+// Unified request logger for the entire project.
 app.use((req, res, next) => {
-    console.log(`[CHECKPOINT: REQUEST] Incoming HTTP request: ${req.method} ${req.url}`);
+    const requestId = `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
+    const startedAt = Date.now();
+    req.requestId = requestId;
+
+    res.on('finish', () => {
+        const durationMs = Date.now() - startedAt;
+        const userLabel = req.user?.name ? `${req.user.name} (${req.user.userId})` : 'guest';
+        console.log(`[REQ ${requestId}] ${req.method} ${req.originalUrl} -> ${res.statusCode} ${durationMs}ms user=${userLabel}`);
+    });
+
+    next();
+});
+
+// Lightweight incoming request marker.
+app.use((req, res, next) => {
+    console.log(`[REQ ${req.requestId}] START ${req.method} ${req.url}`);
     next();
 });
 

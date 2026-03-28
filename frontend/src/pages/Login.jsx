@@ -93,10 +93,10 @@ export default function Login() {
             <input 
               type="text" 
               className="form-input" 
-              placeholder="you@example.com or phone"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              autoComplete="username"
+              autoComplete="off"
+              placeholder="Enter your email or phone"
             />
           </div>
 
@@ -105,9 +105,10 @@ export default function Login() {
             <input 
               type="password" 
               className="form-input" 
-              placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              autoComplete="new-password"
+              placeholder="Enter your password"
             />
           </div>
 

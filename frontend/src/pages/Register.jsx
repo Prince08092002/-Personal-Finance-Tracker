@@ -103,9 +103,10 @@ export default function Register() {
             <input 
               type="text" 
               className="form-input" 
-              placeholder="John Doe"
               value={name}
               onChange={(e) => setName(e.target.value)}
+              autoComplete="off"
+              placeholder="Enter your full name"
             />
           </div>
 
@@ -114,10 +115,10 @@ export default function Register() {
             <input 
               type="text" 
               className="form-input" 
-              placeholder="you@example.com or phone"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              autoComplete="username"
+              autoComplete="off"
+              placeholder="Enter your email or phone"
             />
           </div>
 
@@ -126,9 +127,10 @@ export default function Register() {
             <input 
               type="password" 
               className="form-input" 
-              placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              autoComplete="new-password"
+              placeholder="Create a strong password"
             />
           </div>
 
