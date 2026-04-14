@@ -45,17 +45,34 @@ const Budget = {
                 c.name AS category_name,
                 COALESCE(b.budget_amount, 0) AS budget_amount,
                 COALESCE(SUM(e.amount), 0) AS actual_amount
-            FROM categories c
+            FROM (
+                -- User-specific categories
+                SELECT c1.id, c1.name, c1.user_id
+                FROM categories c1
+                WHERE c1.user_id = ?
+
+                UNION ALL
+
+                -- Default categories (deduped by name), excluded if user has same name
+                SELECT MIN(c0.id) AS id, c0.name, c0.user_id
+                FROM categories c0
+                WHERE c0.user_id IS NULL
+                  AND NOT EXISTS (
+                    SELECT 1
+                    FROM categories u
+                    WHERE u.user_id = ? AND u.name = c0.name
+                  )
+                GROUP BY c0.name, c0.user_id
+            ) c
             LEFT JOIN budgets b
                 ON b.user_id = ? AND b.category_id = c.id AND b.month_key = ?
             LEFT JOIN expenses e
                 ON e.user_id = ? AND e.category_id = c.id
                 AND e.expense_date >= ? AND e.expense_date < ?
-            WHERE c.user_id IS NULL OR c.user_id = ?
             GROUP BY c.id, c.name, b.budget_amount
             ORDER BY c.name ASC
             `,
-            [userId, monthKey, userId, start, end, userId]
+            [userId, userId, userId, monthKey, userId, start, end]
         );
 
         const totals = rows.reduce(

@@ -168,7 +168,10 @@ export default function Dashboard() {
               {/* Recent Transactions */}
               <div>
                 <h3 className="settings-header">Recent Transactions</h3>
-                <TransactionList transactions={dashboardData.recentTransactions} />
+                <TransactionList
+                  transactions={dashboardData.recentTransactions}
+                  highlightHighTransactions
+                />
                 {dashboardData.recentTransactionsPagination?.totalPages > 1 && (
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'var(--space-sm)', gap: 'var(--space-sm)' }}>
                     <button

@@ -74,6 +74,26 @@ const User = {
             [id]
         );
         return result.affectedRows;
+    },
+
+    recordFailedLoginAttempt: async (id, { maxAttempts, lockSeconds }) => {
+        await db.query('UPDATE users SET failed_login_attempts = failed_login_attempts + 1 WHERE id = ?', [id]);
+        const [rows] = await db.query('SELECT failed_login_attempts FROM users WHERE id = ? LIMIT 1', [id]);
+        const attempts = Number(rows[0]?.failed_login_attempts || 0);
+
+        if (attempts >= maxAttempts) {
+            await db.query(
+                'UPDATE users SET lock_until = DATE_ADD(NOW(), INTERVAL ? SECOND), failed_login_attempts = 0 WHERE id = ?',
+                [lockSeconds, id]
+            );
+            return { locked: true, attempts: maxAttempts };
+        }
+
+        return { locked: false, attempts };
+    },
+
+    clearLoginLock: async (id) => {
+        await db.query('UPDATE users SET failed_login_attempts = 0, lock_until = NULL WHERE id = ?', [id]);
     }
 };
 

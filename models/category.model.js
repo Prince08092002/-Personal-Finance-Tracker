@@ -5,15 +5,57 @@ const Category = {
     findAllByUser: async (userId, limit, offset) => {
         console.log(`[MODEL] Find categories for user ${userId} with limit=${limit} offset=${offset}`);
         const [rows] = await db.query(
-            'SELECT id, name, user_id FROM categories WHERE user_id IS NULL OR user_id = ? ORDER BY name ASC LIMIT ? OFFSET ?',
-            [userId, limit, offset]
+            `
+            SELECT x.id, x.name, x.user_id
+            FROM (
+              -- User-specific categories
+              SELECT c.id, c.name, c.user_id
+              FROM categories c
+              WHERE c.user_id = ?
+
+              UNION ALL
+
+              -- Default categories (deduped by name), excluded if user has same name
+              SELECT MIN(c0.id) AS id, c0.name, c0.user_id
+              FROM categories c0
+              WHERE c0.user_id IS NULL
+                AND NOT EXISTS (
+                  SELECT 1
+                  FROM categories u
+                  WHERE u.user_id = ? AND u.name = c0.name
+                )
+              GROUP BY c0.name, c0.user_id
+            ) x
+            ORDER BY x.name ASC
+            LIMIT ? OFFSET ?
+            `,
+            [userId, userId, limit, offset]
         );
         return rows;
     },
     countAllByUser: async (userId) => {
         const [rows] = await db.query(
-            'SELECT COUNT(*) AS total FROM categories WHERE user_id IS NULL OR user_id = ?',
-            [userId]
+            `
+            SELECT COUNT(*) AS total
+            FROM (
+              SELECT c.id
+              FROM categories c
+              WHERE c.user_id = ?
+
+              UNION ALL
+
+              SELECT MIN(c0.id) AS id
+              FROM categories c0
+              WHERE c0.user_id IS NULL
+                AND NOT EXISTS (
+                  SELECT 1
+                  FROM categories u
+                  WHERE u.user_id = ? AND u.name = c0.name
+                )
+              GROUP BY c0.name, c0.user_id
+            ) x
+            `,
+            [userId, userId]
         );
         return Number(rows[0].total || 0);
     },

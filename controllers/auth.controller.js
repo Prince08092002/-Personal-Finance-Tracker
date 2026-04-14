@@ -4,6 +4,9 @@ const crypto = require('crypto');
 const User = require('../models/user.model');
 const { validateSignup, validateLogin } = require('../utils/validators');
 
+const MAX_LOGIN_ATTEMPTS = 3;
+const LOGIN_LOCK_SECONDS = 30;
+
 // Helper to determine real DB identifier properties based on input
 const parseIdentifier = (identifier) => {
     const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier);
@@ -77,8 +80,36 @@ const login = async (req, res, next) => {
              });
         }
 
+        if (user.lock_until && new Date(user.lock_until).getTime() > Date.now()) {
+            const retryAfterSec = Math.max(1, Math.ceil((new Date(user.lock_until).getTime() - Date.now()) / 1000));
+            return res.status(429).json({
+                success: false,
+                action: 'LOGIN_LOCKED',
+                message: `Try again after ${retryAfterSec} seconds`,
+                retryAfterSec
+            });
+        }
+
         const isMatch = await bcrypt.compare(password, user.password);
-        if (!isMatch) return res.status(401).json({ success: false, message: 'Invalid credentials' });
+        if (!isMatch) {
+            const { locked } = await User.recordFailedLoginAttempt(user.id, {
+                maxAttempts: MAX_LOGIN_ATTEMPTS,
+                lockSeconds: LOGIN_LOCK_SECONDS
+            });
+
+            if (locked) {
+                return res.status(429).json({
+                    success: false,
+                    action: 'LOGIN_LOCKED',
+                    message: `Try again after ${LOGIN_LOCK_SECONDS} seconds`,
+                    retryAfterSec: LOGIN_LOCK_SECONDS
+                });
+            }
+
+            return res.status(401).json({ success: false, message: 'Invalid credentials' });
+        }
+
+        await User.clearLoginLock(user.id);
 
         const token = jwt.sign({ userId: user.id, name: user.name }, process.env.JWT_SECRET, { expiresIn: '1d' });
 
@@ -130,11 +161,37 @@ const restoreDirect = async (req, res, next) => {
             return res.status(400).json({ success: false, message: 'Valid deleted account not found.' });
         }
 
+        if (user.lock_until && new Date(user.lock_until).getTime() > Date.now()) {
+            const retryAfterSec = Math.max(1, Math.ceil((new Date(user.lock_until).getTime() - Date.now()) / 1000));
+            return res.status(429).json({
+                success: false,
+                action: 'LOGIN_LOCKED',
+                message: `Try again after ${retryAfterSec} seconds`,
+                retryAfterSec
+            });
+        }
+
         // Verify password before restoring
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
+            const { locked } = await User.recordFailedLoginAttempt(user.id, {
+                maxAttempts: MAX_LOGIN_ATTEMPTS,
+                lockSeconds: LOGIN_LOCK_SECONDS
+            });
+
+            if (locked) {
+                return res.status(429).json({
+                    success: false,
+                    action: 'LOGIN_LOCKED',
+                    message: `Try again after ${LOGIN_LOCK_SECONDS} seconds`,
+                    retryAfterSec: LOGIN_LOCK_SECONDS
+                });
+            }
+
             return res.status(401).json({ success: false, message: 'Invalid credentials. Cannot restore.' });
         }
+
+        await User.clearLoginLock(user.id);
 
         // Restore Account
         await User.restoreAccount(user.id);
